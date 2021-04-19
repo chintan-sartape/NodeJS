@@ -1,57 +1,90 @@
 const express = require('express')
+const app = express()
+const Employee = require('../models/employee')
+const auth = require('../middleware/auth')
 
-var { Employee } = require('../models/employee')
+// const router = express.Router()
 
-var router = express.Router()
-// const app = express()
+// get - all documents - find()
+// router.get('/', (req, res) => {    
+//     // Model.find({}) -> return all data or error
+//     Employee.find({})
+//         .then((result) => res.status(200).send(result))
+//         .catch(error => res.status(500).send(error))
+// })
 
-router.get('/', (req, res) => {
-    
-    // Model.find({}) -> return all data or error
-    Employee.find({})
-        .then((result) => res.status(200).send(result))
-        .catch(error => res.status(500).send(error))
-
+// async - await 
+app.get('/', async (req, res) => {
+    try {
+        // Model.find({}) -> return all data or error
+        const employees = await Employee.find({})
+        res.status(200).send(employees)
+    } catch (e) {
+        res.status(500).send(e)
+    }
 })
 
-router.get('/:id', (req, res) => {
+// serach by id
+// app.get('/:id', (req, res) => {
+//     // read parameter from path
+//     const _id = req.params.id
+//     // Model.findById -> Find data by id or return error
+//     Employee.findById({ _id })
+//         .then((user) => {
+//             if(!user){
+//                 return  res.status(404).send("Employee Not Found")
+//             }
+//             res.status(200).send(user)
+//         })
+//         .catch(error => res.status(500).send(error))
+// })
 
+// async - await 
+app.get('/:id', async (req, res) => {
     // read parameter from path
     const _id = req.params.id
-
-    // Model.findById -> Find data by id or return error
-    Employee.findById({ _id })
-        .then((user) => {
-            if(!user){
-                return  res.status(404).send("Employee Not Found")
-            }
-            res.status(200).send(user)
-        })
-        .catch(error => res.status(500).send(error))
-
+    try {
+        const employee = await Employee.findById(_id)
+        if (!employee) {
+            return res.status(404).send()
+        }
+        // console.log(employee)
+        res.send(employee)
+    } catch (e) {
+        res.status(500).send(e)
+    }
 })
 
-router.post('/', (req, res) =>{
+// app.post('/', (req, res) =>{
+//     // read data from body
+//     const obj = req.body;
+//     // console.log(obj)
+//     // Model object
+//     const emp = new Employee(obj); // run validator on the value
+//     // insert object in mongodb
+//     emp.save()
+//         .then((result) => {
+//             console.log(result)
+//             res.status(201).send(result)
+//         })
+//         .catch((error) => res.status(400).send(error))
+// })
 
-    // read data from body
-    const obj = req.body;
-    // console.log(obj)
-
-    // Model object
-    const emp = new Employee(obj); // run validator on the value
-
+app.post('/', async (req, res) => {
+    const emp = new Employee(req.body);
     // insert object in mongodb
-    emp.save()
-        .then((result) => {
-            console.log(result)
-            res.status(201).send(result)
-        })
-        .catch((error) => res.status(400).send(error))
-
+    try {
+        const newemp = await emp.save()
+        const token = await newemp.generateAuthToken()
+        res.status(201).send({ newemp, token })
+    } catch (e) {
+        res.status(400).send(e)
+    }
 })
 
-router.patch('/:id', (req, res) => {
-    
+app.patch('/:id', (req, res) => {
+    // console.log(req.body)    
+    // return;
     // Model.findByIdAndUpdate -> Find data by id and update the data or return error
     Employee.findByIdAndUpdate(req.params.id, req.body,
         {
@@ -68,7 +101,7 @@ router.patch('/:id', (req, res) => {
 
 })
 
-router.delete('/:id', (req, res) => {
+app.delete('/:id', (req, res) => {
 
     // Model.findByIdAndDelete -> Find data by id and delete the document or return error
     Employee.findByIdAndDelete(req.params.id)
@@ -82,34 +115,27 @@ router.delete('/:id', (req, res) => {
 
 })
 
-router.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
+    try {
 
-    // Employee.findByCredentials(req.body.email, req.body.password)
-    email = req.body.email
-    password = req.body.password
+        email = req.body.email
+        password = req.body.password
 
-    Employee.findOne({ email: email })
-    .then((emp) => {
-        if (!emp) {
-            // throw new Error('Unable to Login')
-            res.status(404).send("Employee email Not Found")
-        } else {
+        const emp = await Employee.findByCredentials(email, password)
 
-            if (emp.password !== password) {
-                // throw new Error('Unable to Login')
-                res.status(404).send("Password not match")
-                
-            } else {
+        if ((emp.error) && (emp.error.includes("Wrong")) ) {
+            res.status(404).send({"error": emp.error})
+        } 
 
-                res.status(200).send(emp)
-            }
-        }
+        const token = await emp.generateAuthToken()
+        res.send({ emp, token })
         
-
-    })
-    .catch(error => res.status(500).send(error))
-
-
+        //res.send(emp)
+        // if response header
+        // res.set({'token', token})
+    } catch (e) {
+        res.status(500).send(e)
+    }
 })
 
-module.exports = router;
+module.exports = app;
