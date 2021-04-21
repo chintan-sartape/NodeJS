@@ -40,7 +40,7 @@ app.get('/', async (req, res) => {
 // })
 
 // async - await 
-app.get('/:id', async (req, res) => {
+app.get('/:id', auth, async (req, res) => {
     // read parameter from path
     const _id = req.params.id
     try {
@@ -82,7 +82,7 @@ app.post('/', async (req, res) => {
     }
 })
 
-app.patch('/:id', (req, res) => {
+app.patch('/:id', auth, (req, res) => {
     // console.log(req.body)    
     // return;
     // Model.findByIdAndUpdate -> Find data by id and update the data or return error
@@ -101,7 +101,7 @@ app.patch('/:id', (req, res) => {
 
 })
 
-app.delete('/:id', (req, res) => {
+app.delete('/:id', auth, (req, res) => {
 
     // Model.findByIdAndDelete -> Find data by id and delete the document or return error
     Employee.findByIdAndDelete(req.params.id)
